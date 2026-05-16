@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { readdir, stat } from 'fs/promises';
+import { readFile, readdir, stat } from 'fs/promises';
 import { join, sep } from 'path';
 import { homedir } from 'os';
 import { parseSkillMd } from './skills.ts';
@@ -23,6 +23,7 @@ import {
   searchForWorkspaceRoot,
   getWorkspacePackageRoots,
   filterNpmSkills,
+  buildNpmSyncTelemetryPackages,
   createSkillSymlink,
   cleanupStaleNpmSkills,
 } from './sync-utils.ts';
@@ -85,11 +86,22 @@ async function scanNodeModulesDir(
   };
 
   const processPackageDir = async (pkgDir: string, packageName: string) => {
+    let packageVersion: string | undefined;
+    try {
+      const pkgJson = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf-8'));
+      if (typeof pkgJson.version === 'string' && pkgJson.version.trim()) {
+        packageVersion = pkgJson.version.trim();
+      }
+    } catch {
+      // package.json is optional for local test fixtures and unusual installs.
+    }
+
     // 1. Check for SKILL.md at package root (simple single-skill package)
     const rootSkill = await parseSkillMd(join(pkgDir, 'SKILL.md'));
     if (rootSkill) {
       addSkill({
         packageName,
+        packageVersion,
         skillName: sanitizePackageName(packageName),
         skillPath: rootSkill.path,
         targetName: createTargetName(packageName),
@@ -122,6 +134,7 @@ async function scanNodeModulesDir(
           if (skill) {
             addSkill({
               packageName,
+              packageVersion,
               skillName: name,
               skillPath: skill.path,
               targetName: createTargetName(packageName, name),
@@ -255,7 +268,10 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
   );
 
   for (const skill of discoveredSkills) {
-    p.log.info(`${pc.cyan(skill.name)} ${pc.dim(`from ${skill.packageName}`)}`);
+    const packageLabel = skill.packageVersion
+      ? `${skill.packageName}@${skill.packageVersion}`
+      : skill.packageName;
+    p.log.info(`${pc.cyan(skill.name)} ${pc.dim(`from ${packageLabel}`)}`);
     if (skill.description) {
       p.log.message(pc.dim(`  ${skill.description}`));
     }
@@ -299,6 +315,12 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
     if (options.gitignore !== false) {
       await runGitignoreUpdate(cwd, options);
     }
+    trackSyncTelemetry({
+      observedSkills: discoveredSkills,
+      skillCount: 0,
+      successCount: 0,
+      agents: options.agent ?? [],
+    });
     console.log();
     p.outro(pc.green('All skills are up to date.'));
     return;
@@ -438,7 +460,10 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
   // 5. Build summary
   const summaryLines: string[] = [];
   for (const skill of toInstall) {
-    summaryLines.push(`${pc.cyan(skill.name)} ${pc.dim(`← ${skill.packageName}`)}`);
+    const packageLabel = skill.packageVersion
+      ? `${skill.packageName}@${skill.packageVersion}`
+      : skill.packageName;
+    summaryLines.push(`${pc.cyan(skill.name)} ${pc.dim(`← ${packageLabel}`)}`);
     summaryLines.push(`  ${pc.dim(skill.targetName)}`);
   }
 
@@ -468,6 +493,7 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
     skill: string;
     targetName: string;
     packageName: string;
+    packageVersion?: string;
     skillsDir: string;
     success: boolean;
     error?: string;
@@ -482,6 +508,7 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
           skill: skill.name,
           targetName: skill.targetName,
           packageName: skill.packageName,
+          packageVersion: skill.packageVersion,
           skillsDir,
           success: true,
         });
@@ -493,6 +520,7 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
         skill: skill.name,
         targetName: skill.targetName,
         packageName: skill.packageName,
+        packageVersion: skill.packageVersion,
         skillsDir,
         success,
         error: success ? undefined : 'Failed to create symlink',
@@ -556,9 +584,10 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
     for (const [, skillResults] of bySkill) {
       const firstResult = skillResults[0]!;
       const shortPath = shortenPath(join(cwd, firstResult.skillsDir, firstResult.targetName), cwd);
-      resultLines.push(
-        `${pc.green('✓')} ${firstResult.skill} ${pc.dim(`← ${firstResult.packageName}`)}`
-      );
+      const packageLabel = firstResult.packageVersion
+        ? `${firstResult.packageName}@${firstResult.packageVersion}`
+        : firstResult.packageName;
+      resultLines.push(`${pc.green('✓')} ${firstResult.skill} ${pc.dim(`← ${packageLabel}`)}`);
       resultLines.push(`  ${pc.dim(shortPath)}`);
     }
 
@@ -576,18 +605,39 @@ export async function runSync(_args: string[], options: SyncOptions = {}): Promi
     }
   }
 
-  // Track telemetry
-  track({
-    event: 'experimental_sync',
-    skillCount: String(toInstall.length),
-    successCount: String(new Set(successful.map((r) => r.targetName)).size),
-    agents: targetAgents.join(','),
+  trackSyncTelemetry({
+    observedSkills: discoveredSkills,
+    skillCount: toInstall.length,
+    successCount: new Set(successful.map((r) => r.targetName)).size,
+    agents: targetAgents,
   });
 
   console.log();
   p.outro(
     pc.green('Done!') + pc.dim('  Review skills before use; they run with full agent permissions.')
   );
+}
+
+function trackSyncTelemetry({
+  observedSkills,
+  skillCount,
+  successCount,
+  agents,
+}: {
+  observedSkills: NpmSkill[];
+  skillCount: number;
+  successCount: number;
+  agents: string[];
+}): void {
+  const packages = buildNpmSyncTelemetryPackages(observedSkills);
+
+  track({
+    event: 'experimental_sync',
+    skillCount: String(skillCount),
+    successCount: String(successCount),
+    agents: agents.join(','),
+    ...(packages.length > 0 && { packages: JSON.stringify(packages) }),
+  });
 }
 
 async function runCleanup(

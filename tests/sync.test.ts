@@ -46,6 +46,17 @@ describe('experimental_sync command', () => {
       expect(result.stdout).toContain('my-skill-pkg');
     });
 
+    it('should read package version from package.json', () => {
+      const packageDir = join(testDir, 'node_modules', 'versioned-pkg');
+      mkdirSync(packageDir, { recursive: true });
+      writeFileSync(join(packageDir, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeSkillMd(packageDir, 'versioned-skill', 'A skill with package version');
+
+      const result = runCli(['experimental_sync', '-y', '-a', 'claude-code'], testDir);
+      expect(result.stdout).toContain('versioned-skill');
+      expect(result.stdout).toContain('versioned-pkg@1.2.3');
+    });
+
     it('should find skills in skills/ subdirectory', () => {
       writeSkillMd(
         join(testDir, 'node_modules', 'my-lib', 'skills', 'helper-skill'),

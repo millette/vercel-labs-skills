@@ -5,11 +5,20 @@ import { platform } from 'os';
 
 export interface NpmSkill {
   packageName: string;
+  packageVersion?: string;
   skillName: string;
   skillPath: string;
   targetName: string;
   name: string;
   description: string;
+}
+
+export interface NpmSyncTelemetryPackage {
+  skill: string;
+  package: string;
+  ecosystem: 'npm';
+  registry: 'npm';
+  version?: string;
 }
 
 export function sanitizePackageName(packageName: string): string {
@@ -165,6 +174,18 @@ export function filterNpmSkills(
   }
 
   return { skills: result, excludedCount: skills.length - result.length };
+}
+
+export function buildNpmSyncTelemetryPackages(skills: NpmSkill[]): NpmSyncTelemetryPackage[] {
+  return skills
+    .filter((skill) => skill.packageName && skill.packageVersion)
+    .map((skill) => ({
+      skill: skill.name,
+      package: skill.packageName,
+      ecosystem: 'npm' as const,
+      registry: 'npm' as const,
+      version: skill.packageVersion,
+    }));
 }
 
 // --- Symlink helpers ---

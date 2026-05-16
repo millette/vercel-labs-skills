@@ -4,6 +4,7 @@ import {
   createTargetName,
   matchesPattern,
   filterNpmSkills,
+  buildNpmSyncTelemetryPackages,
   type NpmSkill,
 } from '../src/sync-utils.ts';
 
@@ -40,6 +41,63 @@ describe('createTargetName', () => {
 
   it('handles scoped packages for subdir skills', () => {
     expect(createTargetName('@vercel/ai-sdk', 'coding')).toBe('npm-vercel-ai-sdk-coding');
+  });
+});
+
+describe('buildNpmSyncTelemetryPackages', () => {
+  it('builds npm package observations for versioned package skills', () => {
+    const skills: NpmSkill[] = [
+      {
+        packageName: 'next',
+        packageVersion: '16.2.1',
+        skillName: 'next',
+        skillPath: '/repo/node_modules/next/dist/skills/next/SKILL.md',
+        targetName: 'npm-next-next',
+        name: 'Next.js',
+        description: 'Next.js skill',
+      },
+      {
+        packageName: '@vercel/ai-sdk',
+        packageVersion: '6.0.0',
+        skillName: 'coding',
+        skillPath: '/repo/node_modules/@vercel/ai-sdk/skills/coding/SKILL.md',
+        targetName: 'npm-vercel-ai-sdk-coding',
+        name: 'AI SDK Coding',
+        description: 'AI SDK skill',
+      },
+    ];
+
+    expect(buildNpmSyncTelemetryPackages(skills)).toEqual([
+      {
+        skill: 'Next.js',
+        package: 'next',
+        ecosystem: 'npm',
+        registry: 'npm',
+        version: '16.2.1',
+      },
+      {
+        skill: 'AI SDK Coding',
+        package: '@vercel/ai-sdk',
+        ecosystem: 'npm',
+        registry: 'npm',
+        version: '6.0.0',
+      },
+    ]);
+  });
+
+  it('omits skills when package version is unavailable', () => {
+    const skills: NpmSkill[] = [
+      {
+        packageName: 'fixture-pkg',
+        skillName: 'skill',
+        skillPath: '/fixture/SKILL.md',
+        targetName: 'npm-fixture-pkg',
+        name: 'Fixture Skill',
+        description: 'No package.json version',
+      },
+    ];
+
+    expect(buildNpmSyncTelemetryPackages(skills)).toEqual([]);
   });
 });
 
