@@ -183,24 +183,54 @@ export async function discoverSkills(
     join(searchPath, '.zencoder/skills'),
   ];
 
+  // Known skill container dirs are walked one extra level deep so layouts
+  // like `skills/<category>/<skill>/SKILL.md` are discovered without
+  // requiring `--full-depth`. The repo root (first entry) keeps its
+  // existing depth-1 behavior to avoid surfacing unrelated `SKILL.md`
+  // files (e.g. `examples/foo/SKILL.md`), and plugin-manifest-declared
+  // dirs (appended below) stay at depth-1 to honor the manifest spec.
+  const deepContainerDirs = new Set(prioritySearchDirs.slice(1));
+
   // Add skill paths declared in plugin manifests
   prioritySearchDirs.push(...(await getPluginSkillPaths(searchPath)));
 
+  const tryAddSkillAt = async (skillDir: string): Promise<boolean> => {
+    if (!(await hasSkillMd(skillDir))) return false;
+    let skill = await parseSkillMd(join(skillDir, 'SKILL.md'), options);
+    if (!skill || seenNames.has(skill.name)) return true;
+    skill = enhanceSkill(skill);
+    skills.push(skill);
+    seenNames.add(skill.name);
+    return true;
+  };
+
   for (const dir of prioritySearchDirs) {
+    const walkDeep = deepContainerDirs.has(dir);
+
     try {
       const entries = await readdir(dir, { withFileTypes: true });
 
       for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const skillDir = join(dir, entry.name);
-          if (await hasSkillMd(skillDir)) {
-            let skill = await parseSkillMd(join(skillDir, 'SKILL.md'), options);
-            if (skill && !seenNames.has(skill.name)) {
-              skill = enhanceSkill(skill);
-              skills.push(skill);
-              seenNames.add(skill.name);
-            }
+        if (!entry.isDirectory()) continue;
+
+        const childDir = join(dir, entry.name);
+        const foundAtChild = await tryAddSkillAt(childDir);
+
+        // Don't descend past a discovered SKILL.md (matches the existing
+        // flat-layout semantics) and don't go deeper inside non-container
+        // priority dirs.
+        if (foundAtChild || !walkDeep) continue;
+        if (SKIP_DIRS.includes(entry.name)) continue;
+
+        // Walk one extra level for catalog layouts.
+        try {
+          const grandEntries = await readdir(childDir, { withFileTypes: true });
+          for (const grand of grandEntries) {
+            if (!grand.isDirectory() || SKIP_DIRS.includes(grand.name)) continue;
+            await tryAddSkillAt(join(childDir, grand.name));
           }
+        } catch {
+          // Child dir unreadable; skip silently.
         }
       }
     } catch {
