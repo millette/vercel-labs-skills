@@ -11,6 +11,7 @@ const codexHome = process.env.CODEX_HOME?.trim() || join(home, '.codex');
 const claudeHome = process.env.CLAUDE_CONFIG_DIR?.trim() || join(home, '.claude');
 const vibeHome = process.env.VIBE_HOME?.trim() || join(home, '.vibe');
 const hermesHome = process.env.HERMES_HOME?.trim() || join(home, '.hermes');
+const autohandHome = process.env.AUTOHAND_HOME?.trim() || join(home, '.autohand');
 const zedAppDataHome = process.env.APPDATA?.trim();
 const zedFlatpakConfigHome = process.env.FLATPAK_XDG_CONFIG_HOME?.trim();
 
@@ -65,6 +66,24 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalSkillsDir: join(home, '.gemini/antigravity-cli/skills'),
     detectInstalled: async () => {
       return existsSync(join(home, '.gemini/antigravity-cli'));
+    },
+  },
+  astrbot: {
+    name: 'astrbot',
+    displayName: 'AstrBot',
+    skillsDir: 'data/skills',
+    globalSkillsDir: join(home, '.astrbot/data/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(process.cwd(), 'data/skills')) || existsSync(join(home, '.astrbot'));
+    },
+  },
+  'autohand-code': {
+    name: 'autohand-code',
+    displayName: 'Autohand Code CLI',
+    skillsDir: '.autohand/skills',
+    globalSkillsDir: join(autohandHome, 'skills'),
+    detectInstalled: async () => {
+      return existsSync(autohandHome);
     },
   },
   augment: {
@@ -296,6 +315,24 @@ export const agents: Record<AgentType, AgentConfig> = {
       return existsSync(hermesHome);
     },
   },
+  'inference-sh': {
+    name: 'inference-sh',
+    displayName: 'inference.sh',
+    skillsDir: '.inferencesh/skills',
+    globalSkillsDir: join(home, '.inferencesh/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.inferencesh'));
+    },
+  },
+  jazz: {
+    name: 'jazz',
+    displayName: 'Jazz',
+    skillsDir: '.jazz/skills',
+    globalSkillsDir: join(home, '.jazz/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.jazz')) || existsSync(join(process.cwd(), '.jazz'));
+    },
+  },
   junie: {
     name: 'junie',
     displayName: 'Junie',
@@ -350,6 +387,24 @@ export const agents: Record<AgentType, AgentConfig> = {
       return existsSync(join(home, '.kode'));
     },
   },
+  lingma: {
+    name: 'lingma',
+    displayName: 'Lingma',
+    skillsDir: '.lingma/skills',
+    globalSkillsDir: join(home, '.lingma/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.lingma'));
+    },
+  },
+  loaf: {
+    name: 'loaf',
+    displayName: 'Loaf',
+    skillsDir: '.agents/skills',
+    globalSkillsDir: join(home, '.agents/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.loaf'));
+    },
+  },
   mcpjam: {
     name: 'mcpjam',
     displayName: 'MCPJam',
@@ -366,6 +421,15 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalSkillsDir: join(vibeHome, 'skills'),
     detectInstalled: async () => {
       return existsSync(vibeHome);
+    },
+  },
+  moxby: {
+    name: 'moxby',
+    displayName: 'Moxby',
+    skillsDir: '.moxby/skills',
+    globalSkillsDir: join(home, '.moxby/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.moxby'));
     },
   },
   mux: {
@@ -395,6 +459,15 @@ export const agents: Record<AgentType, AgentConfig> = {
       return existsSync(join(home, '.openhands'));
     },
   },
+  ona: {
+    name: 'ona',
+    displayName: 'Ona',
+    skillsDir: '.ona/skills',
+    globalSkillsDir: join(home, '.ona/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.ona'));
+    },
+  },
   pi: {
     name: 'pi',
     displayName: 'Pi',
@@ -411,6 +484,15 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalSkillsDir: join(home, '.qoder/skills'),
     detectInstalled: async () => {
       return existsSync(join(home, '.qoder'));
+    },
+  },
+  'qoder-cn': {
+    name: 'qoder-cn',
+    displayName: 'Qoder CN',
+    skillsDir: '.qoder/skills',
+    globalSkillsDir: join(home, '.qoder-cn/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.qoder-cn'));
     },
   },
   'qwen-code': {
@@ -430,6 +512,15 @@ export const agents: Record<AgentType, AgentConfig> = {
     showInUniversalList: false,
     detectInstalled: async () => {
       return existsSync(join(process.cwd(), '.replit'));
+    },
+  },
+  reasonix: {
+    name: 'reasonix',
+    displayName: 'Reasonix',
+    skillsDir: '.reasonix/skills',
+    globalSkillsDir: join(home, '.reasonix/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.reasonix'));
     },
   },
   rovodev: {
@@ -457,6 +548,24 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalSkillsDir: join(home, '.tabnine/agent/skills'),
     detectInstalled: async () => {
       return existsSync(join(home, '.tabnine'));
+    },
+  },
+  terramind: {
+    name: 'terramind',
+    displayName: 'Terramind',
+    skillsDir: '.terramind/skills',
+    globalSkillsDir: join(home, '.terramind/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.terramind'));
+    },
+  },
+  tinycloud: {
+    name: 'tinycloud',
+    displayName: 'Tinycloud',
+    skillsDir: '.tinycloud/skills',
+    globalSkillsDir: join(home, '.tinycloud/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.tinycloud'));
     },
   },
   trae: {
@@ -495,6 +604,18 @@ export const agents: Record<AgentType, AgentConfig> = {
       return existsSync(join(home, '.codeium/windsurf'));
     },
   },
+  witsy: {
+    name: 'witsy',
+    displayName: 'Witsy',
+    skillsDir: '.agents/skills',
+    globalSkillsDir: join(home, '.agents/skills'),
+    detectInstalled: async () => {
+      return (
+        existsSync(join(home, 'Library/Application Support/Witsy')) ||
+        existsSync(join(configHome, 'Witsy'))
+      );
+    },
+  },
   zed: {
     name: 'zed',
     displayName: 'Zed',
@@ -518,6 +639,15 @@ export const agents: Record<AgentType, AgentConfig> = {
       return existsSync(join(home, '.zencoder'));
     },
   },
+  zenflow: {
+    name: 'zenflow',
+    displayName: 'Zenflow',
+    skillsDir: '.zencoder/skills',
+    globalSkillsDir: join(home, '.zencoder/skills'),
+    detectInstalled: async () => {
+      return existsSync(join(home, '.zencoder'));
+    },
+  },
   neovate: {
     name: 'neovate',
     displayName: 'Neovate',
@@ -534,6 +664,18 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalSkillsDir: join(home, '.pochi/skills'),
     detectInstalled: async () => {
       return existsSync(join(home, '.pochi'));
+    },
+  },
+  promptscript: {
+    name: 'promptscript',
+    displayName: 'PromptScript',
+    skillsDir: '.agents/skills',
+    globalSkillsDir: undefined,
+    detectInstalled: async () => {
+      return (
+        existsSync(join(process.cwd(), '.promptscript')) ||
+        existsSync(join(process.cwd(), 'promptscript.yaml'))
+      );
     },
   },
   adal: {
